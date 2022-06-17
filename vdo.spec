@@ -38,7 +38,7 @@ block-level deduplication, compression, and thin provisioning.
 This package provides the user-space management tools for VDO.
 
 %prep
-%setup -q
+%setup -n vdo-unstable
 
 %build
 make

@@ -65,7 +65,7 @@ done
 /usr/sbin/dkms --rpm_safe_upgrade remove -m %{kmod_name} -v %{version} --all || :
 
 %prep
-%setup -n %{kmod_name}-%{kmod_driver_version}
+%setup -n kvdo-unstable
 
 %build
 # Nothing doing here, as we're going to build on whatever kernel we end up
