@@ -1,0 +1,133 @@
+From 5431faff9476feac86c559cb6ba40333600dc276 Mon Sep 17 00:00:00 2001
+From: Michael Sclafani <sclafani@redhat.com>
+Date: Wed, 15 Jun 2022 20:12:38 -0400
+Subject: [PATCH 04/13] Fixed GCC implicit-fallthrough errors when building for
+ latest kernel Author: sclafani@redhat.com
+
+The kernel a while ago switched from "// fall through" comments in
+switch statements to using a GCC attribute as a statement (via a
+macro). In the latest kernel, it appears that GCC has been
+configured by default to only accept the macro/attribute.
+
+Pair: msakai
+
+.../vioWrite.c
+.../kernelLayer.c
+Switched from "// fall through" comments to "fallthough;"
+  macro/attribute statements.
+---
+ vdo/base/vioWrite.c      |  8 ++++----
+ vdo/kernel/kernelLayer.c | 18 +++++++++---------
+ 2 files changed, 13 insertions(+), 13 deletions(-)
+
+diff --git a/vdo/base/vioWrite.c b/vdo/base/vioWrite.c
+index 614746b..a19f49a 100644
+--- a/vdo/base/vioWrite.c
++++ b/vdo/base/vioWrite.c
+@@ -311,7 +311,7 @@ static void performCleanupStage(DataVIO *dataVIO, DataVIOCleanupStage stage)
+                                   THIS_LOCATION("$F;cb=releaseAllocLock"));
+       return;
+     }
+-    // fall through
++    fallthrough;
+ 
+   case VIO_RELEASE_RECOVERY_LOCKS:
+     if ((dataVIO->recoverySequenceNumber > 0)
+@@ -319,7 +319,7 @@ static void performCleanupStage(DataVIO *dataVIO, DataVIOCleanupStage stage)
+         && (dataVIOAsCompletion(dataVIO)->result != VDO_READ_ONLY)) {
+       logWarning("VDO not read-only when cleaning DataVIO with RJ lock");
+     }
+-    // fall through
++    fallthrough;
+ 
+   case VIO_RELEASE_HASH_LOCK:
+     if (dataVIO->hashLock != NULL) {
+@@ -327,7 +327,7 @@ static void performCleanupStage(DataVIO *dataVIO, DataVIOCleanupStage stage)
+                              THIS_LOCATION("$F;cb=cleanHashLock"));
+       return;
+     }
+-    // fall through
++    fallthrough;
+ 
+   case VIO_RELEASE_LOGICAL:
+     if (!isCompressedWriteDataVIO(dataVIO)) {
+@@ -335,7 +335,7 @@ static void performCleanupStage(DataVIO *dataVIO, DataVIOCleanupStage stage)
+                             THIS_LOCATION("$F;cb=releaseLL"));
+       return;
+     }
+-    // fall through
++    fallthrough;
+ 
+   default:
+     finishCleanup(dataVIO);
+diff --git a/vdo/kernel/kernelLayer.c b/vdo/kernel/kernelLayer.c
+index 082b607..e581e78 100644
+--- a/vdo/kernel/kernelLayer.c
++++ b/vdo/kernel/kernelLayer.c
+@@ -1080,41 +1080,41 @@ void freeKernelLayer(KernelLayer *layer)
+ 
+   case LAYER_RUNNING:
+     suspendKernelLayer(layer);
+-    // fall through
++    fallthrough;
+ 
+   case LAYER_STARTING:
+   case LAYER_RESUMING:
+   case LAYER_SUSPENDED:
+     stopKernelLayer(layer);
+-    // fall through
++    fallthrough;
+ 
+   case LAYER_STOPPED:
+   case LAYER_CPU_QUEUE_INITIALIZED:
+     finishWorkQueue(layer->cpuQueue);
+     usedCpuQueue = true;
+     releaseInstance = true;
+-    // fall through
++    fallthrough;
+ 
+   case LAYER_BIO_ACK_QUEUE_INITIALIZED:
+     if (useBioAckQueue(layer)) {
+       finishWorkQueue(layer->bioAckQueue);
+       usedBioAckQueue = true;
+     }
+-    // fall through
++    fallthrough;
+ 
+   case LAYER_BIO_DATA_INITIALIZED:
+     cleanupIOSubmitter(layer->ioSubmitter);
+-    // fall through
++    fallthrough;
+ 
+   case LAYER_REQUEST_QUEUE_INITIALIZED:
+     finishKVDO(&layer->kvdo);
+     usedKVDO = true;
+-    // fall through
++    fallthrough;
+ 
+   case LAYER_BUFFER_POOLS_INITIALIZED:
+     freeBufferPool(&layer->dataKVIOPool);
+     freeBufferPool(&layer->traceBufferPool);
+-    // fall through
++    fallthrough;
+ 
+   case LAYER_SIMPLE_THINGS_INITIALIZED:
+     if (layer->compressionContext != NULL) {
+@@ -1267,12 +1267,12 @@ void stopKernelLayer(KernelLayer *layer)
+   switch (getKernelLayerState(layer)) {
+   case LAYER_RUNNING:
+     suspendKernelLayer(layer);
+-    // fall through
++    fallthrough;
+ 
+   case LAYER_SUSPENDED:
+     setKernelLayerState(layer, LAYER_STOPPING);
+     stopDedupeIndex(layer->dedupeIndex);
+-    // fall through
++    fallthrough;
+ 
+   case LAYER_STOPPING:
+   case LAYER_STOPPED:
+-- 
+2.35.3
+

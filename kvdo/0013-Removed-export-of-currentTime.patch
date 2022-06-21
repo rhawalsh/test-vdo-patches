@@ -1,0 +1,27 @@
+From 8c0c1f171e7ae37e75466142771d597b519beb2a Mon Sep 17 00:00:00 2001
+From: Andrew Walsh <awalsh@redhat.com>
+Date: Wed, 15 Jun 2022 22:30:20 -0400
+Subject: [PATCH 13/13] Removed export of currentTime().
+
+As a static method defined in a header file currentTime() does not require a
+symbol export.  More importantly, this prevents a build failure on 5.11+
+kernels.
+---
+ uds/udsModule.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/uds/udsModule.c b/uds/udsModule.c
+index 438aa06..f72bb7c 100644
+--- a/uds/udsModule.c
++++ b/uds/udsModule.c
+@@ -95,7 +95,6 @@ EXPORT_SYMBOL_GPL(clearBuffer);
+ EXPORT_SYMBOL_GPL(compactBuffer);
+ EXPORT_SYMBOL_GPL(contentLength);
+ EXPORT_SYMBOL_GPL(copyBytes);
+-EXPORT_SYMBOL_GPL(currentTime);
+ EXPORT_SYMBOL_GPL(duplicateString);
+ EXPORT_SYMBOL_GPL(ensureAvailableSpace);
+ EXPORT_SYMBOL_GPL(equalBuffers);
+-- 
+2.35.3
+

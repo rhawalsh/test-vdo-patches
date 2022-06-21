@@ -1,0 +1,82 @@
+From 59c25ed06dd9900d73d28cbe7156b9b4544b98e5 Mon Sep 17 00:00:00 2001
+From: Michael Sclafani <sclafani@redhat.com>
+Date: Wed, 15 Jun 2022 20:34:36 -0400
+Subject: [PATCH 05/13] Removed unneeded casts to KvdoWorkFunction
+
+Pair: sweettea
+
+.../batchProcessor.c
+.../ioSubmitter.c
+.../kernelVDO.c
+.../kvio.c
+Removed casts to KvdoWorkFunction for parameters that are just
+  void * addresses passed through for work queue statistics. The
+  cast is unnecessary and confusing since the functions being cast
+  sometimes don't have a signature compatible with the cast.
+---
+ vdo/kernel/batchProcessor.c | 6 ++++--
+ vdo/kernel/ioSubmitter.c    | 3 +--
+ vdo/kernel/kernelVDO.c      | 2 +-
+ vdo/kernel/kvio.c           | 2 +-
+ 4 files changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/vdo/kernel/batchProcessor.c b/vdo/kernel/batchProcessor.c
+index d7b42a6..f6bbdb4 100644
+--- a/vdo/kernel/batchProcessor.c
++++ b/vdo/kernel/batchProcessor.c
+@@ -168,8 +168,10 @@ int makeBatchProcessor(KernelLayer             *layer,
+   }
+ 
+   spin_lock_init(&batch->consumerLock);
+-  setupWorkItem(&batch->workItem, batchProcessorWork,
+-                (KvdoWorkFunction) callback, CPU_Q_ACTION_COMPLETE_KVIO);
++  setupWorkItem(&batch->workItem,
++                batchProcessorWork,
++                callback,
++                CPU_Q_ACTION_COMPLETE_KVIO);
+   atomic_set(&batch->state, BATCH_PROCESSOR_IDLE);
+   batch->callback = callback;
+   batch->closure  = closure;
+diff --git a/vdo/kernel/ioSubmitter.c b/vdo/kernel/ioSubmitter.c
+index fcd839e..db2eaee 100644
+--- a/vdo/kernel/ioSubmitter.c
++++ b/vdo/kernel/ioSubmitter.c
+@@ -483,8 +483,7 @@ void submitBio(BIO *bio, BioQAction action)
+ {
+   KVIO *kvio                  = bio->bi_private;
+   kvio->bioToSubmit           = bio;
+-  setupKVIOWork(kvio, processBioMap, (KvdoWorkFunction) bio->bi_end_io,
+-                action);
++  setupKVIOWork(kvio, processBioMap, bio->bi_end_io, action);
+ 
+   KernelLayer  *layer = kvio->layer;
+   BioQueueData *bioQueueData
+diff --git a/vdo/kernel/kernelVDO.c b/vdo/kernel/kernelVDO.c
+index 1db653f..19b8876 100644
+--- a/vdo/kernel/kernelVDO.c
++++ b/vdo/kernel/kernelVDO.c
+@@ -537,7 +537,7 @@ void kvdoEnqueue(Enqueueable *enqueueable)
+                       THIS_LOCATION("$F($cb)"));
+   }
+   setupWorkItem(&kvdoEnqueueable->workItem, kvdoEnqueueWork,
+-                (KvdoWorkFunction) enqueueable->completion->callback,
++                enqueueable->completion->callback,
+                 REQ_Q_ACTION_COMPLETION);
+   enqueueKVDOThreadWork(&layer->kvdo.threads[threadID],
+                         &kvdoEnqueueable->workItem);
+diff --git a/vdo/kernel/kvio.c b/vdo/kernel/kvio.c
+index 949e66d..402793b 100644
+--- a/vdo/kernel/kvio.c
++++ b/vdo/kernel/kvio.c
+@@ -49,7 +49,7 @@ static void kvdoHandleVIOCallback(KvdoWorkItem *item)
+ void kvdoEnqueueVIOCallback(KVIO *kvio)
+ {
+   enqueueKVIO(kvio, kvdoHandleVIOCallback,
+-              (KvdoWorkFunction) vioAsCompletion(kvio->vio)->callback,
++              vioAsCompletion(kvio->vio)->callback,
+               REQ_Q_ACTION_VIO_CALLBACK);
+ }
+ 
+-- 
+2.35.3
+

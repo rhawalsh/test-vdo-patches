@@ -1,0 +1,56 @@
+From 0501c34cafa7f17b7123ef65341842664d70cb2b Mon Sep 17 00:00:00 2001
+From: Andrew Walsh <awalsh@redhat.com>
+Date: Wed, 15 Jun 2022 21:34:01 -0400
+Subject: [PATCH 09/13] Adapt PDE_DATA to kernel 5.17
+
+per commit 6dfbbae14a7b961f41d80a106e1ab60e86d061c5
+---
+ vdo/kernel/statusProcfs.c | 16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/vdo/kernel/statusProcfs.c b/vdo/kernel/statusProcfs.c
+index 906223d..129a96d 100644
+--- a/vdo/kernel/statusProcfs.c
++++ b/vdo/kernel/statusProcfs.c
+@@ -76,7 +76,11 @@ static int statusDedupeShow(struct seq_file *m, void *v)
+ static int statusDedupeOpen(struct inode *inode, struct file *file)
+ {
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
++#if LINUX_VERSION_CODE >=KERNEL_VERSION(5,17,0)
++  return single_open(file, statusDedupeShow, pde_data(inode));
++#else
+   return single_open(file, statusDedupeShow, PDE_DATA(inode));
++#endif
+ #else
+   return single_open(file, statusDedupeShow, PDE(inode)->data);
+ #endif
+@@ -178,7 +182,11 @@ static int statusKernelShow(struct seq_file *m, void *v)
+ static int statusKernelOpen(struct inode *inode, struct file *file)
+ {
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
++  return single_open(file, statusKernelShow, pde_data(inode));
++#else
+   return single_open(file, statusKernelShow, PDE_DATA(inode));
++#endif
+ #else
+   return single_open(file, statusKernelShow, PDE(inode)->data);
+ #endif
+@@ -186,10 +194,10 @@ static int statusKernelOpen(struct inode *inode, struct file *file)
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,6,0)
+ static const struct proc_ops vdoProcfsKernelOps = {
+-￼ .proc_open = statusKernelOpen,
+-￼ .proc_read = seq_read,
+-￼ .proc_lseek = seq_lseek,
+-￼ .proc_release = single_release,
++  .proc_open = statusKernelOpen,
++  .proc_read = seq_read,
++  .proc_lseek = seq_lseek,
++  .proc_release = single_release,
+ };
+ #else
+ static const struct file_operations vdoProcfsKernelOps = {
+-- 
+2.35.3
+

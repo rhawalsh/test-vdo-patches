@@ -1,0 +1,126 @@
+From fc524a796fe9f15ada8d02d3ac1d87cc98d63c16 Mon Sep 17 00:00:00 2001
+From: Andrew Walsh <awalsh@redhat.com>
+Date: Wed, 15 Jun 2022 21:03:05 -0400
+Subject: [PATCH 08/13] Update procfs args for kernel 5.6 and above.
+
+With commit d56c0d45f0e27f814e87a1676b6bdccccbc252e9 in the kernel, proc
+calls need to use 'struct proc_ops' instead of 'struct file_operations'.
+This commit applies that requirement for kernels 5.6 and newer.
+---
+ vdo/kernel/dmvdo.c        |  7 +++----
+ vdo/kernel/ioSubmitter.c  |  4 ++++
+ vdo/kernel/kvdoFlush.c    |  4 ++++
+ vdo/kernel/statusProcfs.c | 18 ++++++++++++++++++
+ 4 files changed, 29 insertions(+), 4 deletions(-)
+
+diff --git a/vdo/kernel/dmvdo.c b/vdo/kernel/dmvdo.c
+index 15454bb..3f0d29c 100644
+--- a/vdo/kernel/dmvdo.c
++++ b/vdo/kernel/dmvdo.c
+@@ -80,8 +80,7 @@ static KernelLayer *getKernelLayerForTarget(struct dm_target *ti)
+ 
+ /**
+  * Begin VDO processing of a bio.  This is called by the device mapper
+- * through the "map" function, and has resulted from a call to either
+- * submit_bio or generic_make_request.
++ * through the "map" function, and has resulted from a bio being submitted.
+  *
+  * @param ti      The dm_target.  We only need the "private" member to give
+  *                us the KernelLayer.
+@@ -95,11 +94,11 @@ static KernelLayer *getKernelLayerForTarget(struct dm_target *ti)
+  *         DM_MAPIO_SUBMITTED  VDO will take care of this I/O, either
+  *                             processing it completely and calling
+  *                             bio_endio, or forwarding it onward by
+- *                             calling generic_make_request.
++ *                             submitting it to the next layer.
+  *
+  *         DM_MAPIO_REMAPPED   VDO has modified the bio and the device
+  *                             mapper will immediately forward the bio
+- *                             onward using generic_make_request.
++ *                             onward by submitting it to the next layer.
+  *
+  *         DM_MAPIO_REQUEUE    We do not use this.  It is used by device
+  *                             mapper devices to defer an I/O request
+diff --git a/vdo/kernel/ioSubmitter.c b/vdo/kernel/ioSubmitter.c
+index d208ef6..71f89db 100644
+--- a/vdo/kernel/ioSubmitter.c
++++ b/vdo/kernel/ioSubmitter.c
+@@ -291,7 +291,11 @@ static void sendBioToDevice(KVIO *kvio, BIO *bio, TraceLocation location)
+   countAllBios(kvio, bio);
+   kvioAddTraceRecord(kvio, location);
+   bio->bi_next = NULL;
++#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,9,0)
+   generic_make_request(bio);
++#else
++  submit_bio_noacct(bio);
++#endif
+ }
+ 
+ /**
+diff --git a/vdo/kernel/kvdoFlush.c b/vdo/kernel/kvdoFlush.c
+index cc704fe..b6c24d9 100644
+--- a/vdo/kernel/kvdoFlush.c
++++ b/vdo/kernel/kvdoFlush.c
+@@ -212,7 +212,11 @@ static void kvdoCompleteFlushWork(KvdoWorkItem *item)
+     prepareFlushBIO(bio, bio->bi_private, getKernelLayerBdev(layer),
+                     bio->bi_end_io);
+     atomic64_inc(&layer->flushOut);
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0)
+     generic_make_request(bio);
++#else
++    submit_bio_noacct(bio);
++#endif
+   }
+ 
+ 
+diff --git a/vdo/kernel/statusProcfs.c b/vdo/kernel/statusProcfs.c
+index f338e0a..906223d 100644
+--- a/vdo/kernel/statusProcfs.c
++++ b/vdo/kernel/statusProcfs.c
+@@ -82,12 +82,21 @@ static int statusDedupeOpen(struct inode *inode, struct file *file)
+ #endif
+ }
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,6,0)
++static const struct proc_ops vdoProcfsDedupeOps = {
++  .proc_open = statusDedupeOpen,
++  .proc_read = seq_read,
++  .proc_lseek = seq_lseek,
++  .proc_release = single_release,
++};
++#else
+ static const struct file_operations vdoProcfsDedupeOps = {
+   .open = statusDedupeOpen,
+   .read = seq_read,
+   .llseek = seq_lseek,
+   .release = single_release,
+ };
++#endif
+ 
+ /**********************************************************************/
+ static void copyBioStat(BioStats *b, const AtomicBioStats *a)
+@@ -175,12 +184,21 @@ static int statusKernelOpen(struct inode *inode, struct file *file)
+ #endif
+ }
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,6,0)
++static const struct proc_ops vdoProcfsKernelOps = {
++￼ .proc_open = statusKernelOpen,
++￼ .proc_read = seq_read,
++￼ .proc_lseek = seq_lseek,
++￼ .proc_release = single_release,
++};
++#else
+ static const struct file_operations vdoProcfsKernelOps = {
+   .open = statusKernelOpen,
+   .read = seq_read,
+   .llseek = seq_lseek,
+   .release = single_release,
+ };
++#endif
+ 
+ /**********************************************************************/
+ int vdoInitProcfs()
+-- 
+2.35.3
+

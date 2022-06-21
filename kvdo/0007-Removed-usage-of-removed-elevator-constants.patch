@@ -1,0 +1,80 @@
+From ea86f7f8a583a09e81eda76c8e55f6e910f9daac Mon Sep 17 00:00:00 2001
+From: Andrew Walsh <awalsh@redhat.com>
+Date: Wed, 15 Jun 2022 20:48:23 -0400
+Subject: [PATCH 07/13] Removed usage of removed elevator constants.
+
+---
+ vdo/kernel/ioSubmitter.c | 32 +++++++++++---------------------
+ 1 file changed, 11 insertions(+), 21 deletions(-)
+
+diff --git a/vdo/kernel/ioSubmitter.c b/vdo/kernel/ioSubmitter.c
+index db2eaee..d208ef6 100644
+--- a/vdo/kernel/ioSubmitter.c
++++ b/vdo/kernel/ioSubmitter.c
+@@ -357,23 +357,20 @@ static void processBioMap(KvdoWorkItem *item)
+  *
+  * @param map        The bio map to use for merging
+  * @param kvio       The kvio we want to merge
+- * @param mergeType  The type of merging we want to try
++ * @param backMerge  Set to true for a back merge, false for a front merge
+  *
+  * @return the kvio to merge to, NULL if no merging is possible
+  */
+-static KVIO *getMergeableLocked(IntMap       *map,
+-                                KVIO         *kvio,
+-                                unsigned int  mergeType)
++static KVIO *getMergeableLocked(IntMap *map,
++                                KVIO   *kvio,
++                                bool   backMerge)
+ {
+   BIO         *bio         = kvio->bioToSubmit;
+   sector_t     mergeSector = getBioSector(bio);
+-  switch (mergeType) {
+-  case ELEVATOR_BACK_MERGE:
++  if (backMerge) {
+     mergeSector -= VDO_SECTORS_PER_BLOCK;
+-    break;
+-  case ELEVATOR_FRONT_MERGE:
++  } else {
+     mergeSector += VDO_SECTORS_PER_BLOCK;
+-    break;
+   }
+ 
+   KVIO *kvioMerge = intMapGet(map, mergeSector);
+@@ -387,17 +384,12 @@ static KVIO *getMergeableLocked(IntMap       *map,
+     } else if (bio_list_empty(&kvioMerge->biosMerged)) {
+       return NULL;
+     } else {
+-      switch (mergeType) {
+-      case ELEVATOR_BACK_MERGE:
++      if (backMerge) {
+         if (getBioSector(kvioMerge->biosMerged.tail) != mergeSector) {
+           return NULL;
+         }
+-        break;
+-      case ELEVATOR_FRONT_MERGE:
+-        if (getBioSector(kvioMerge->biosMerged.head) != mergeSector) {
+-          return NULL;
+-        }
+-        break;
++      } else if (getBioSector(kvioMerge->biosMerged.head) != mergeSector) {
++        return NULL;
+       }
+     }
+   }
+@@ -421,10 +413,8 @@ static bool tryBioMapMerge(BioQueueData *bioQueueData, KVIO *kvio, BIO *bio)
+   bool merged = false;
+ 
+   mutex_lock(&bioQueueData->lock);
+-  KVIO *prevKvio = getMergeableLocked(bioQueueData->map, kvio,
+-                                      ELEVATOR_BACK_MERGE);
+-  KVIO *nextKvio = getMergeableLocked(bioQueueData->map, kvio,
+-                                      ELEVATOR_FRONT_MERGE);
++  KVIO *prevKvio = getMergeableLocked(bioQueueData->map, kvio, true);
++  KVIO *nextKvio = getMergeableLocked(bioQueueData->map, kvio, false);
+   if (prevKvio == nextKvio) {
+     nextKvio = NULL;
+   }
+-- 
+2.35.3
+

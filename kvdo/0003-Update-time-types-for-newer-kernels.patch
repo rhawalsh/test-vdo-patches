@@ -1,0 +1,195 @@
+From 6f2f6e150b80bc9f729e307d45cf7f29db39efb0 Mon Sep 17 00:00:00 2001
+From: John Wiele <jwiele@redhat.com>
+Date: Wed, 15 Jun 2022 20:09:01 -0400
+Subject: [PATCH 03/13] Update time types for newer kernels <Author:
+ jwiele@redhat.com>
+
+Newer kernels have removed time types and functions that are
+specific to user space APIs as part of the effort to use
+ktime_t for all kernel timekeeping. Luckily, UDS only uses
+timespec and timeval in user space. UDS uses time_t in stats,
+but time_t is just a number of seconds, and in modern systems
+should be a 64 bit integer, even on 32 bit systems, so it can
+be compatibly replaced with int64_t. A static assertion will
+check that assumption.
+
+Pair: sweettea
+
+.../timeUtils.h
+Add a function to convert absolute nanosecond time to
+  milliseconds.
+Wrap user space specific functions with "#ifndef __KERNEL__".
+Correct the comments on the user space specific functions.
+
+.../timeUtils.c
+Add a static assertion that time_t is the same as int64_t.
+
+.../indexLayout.c
+Use the new absolute time to milliseconds function in lieu of
+  the old getTimeMS function which was needed when user space
+  time had a different representation from kernel space time,
+  but can now be replaced with a simpler function.
+
+.../uds.h
+.../indexSession.c
+Represent time in stats as int64_t instead of time_t.
+---
+ uds/indexLayout.c  |  9 ---------
+ uds/indexSession.c |  2 +-
+ uds/timeUtils.c    |  1 +
+ uds/timeUtils.h    | 37 ++++++++++++++++++++++++++++++-------
+ uds/uds.h          |  2 +-
+ 5 files changed, 33 insertions(+), 18 deletions(-)
+
+diff --git a/uds/indexLayout.c b/uds/indexLayout.c
+index f05e54c..5c0bda5 100644
+--- a/uds/indexLayout.c
++++ b/uds/indexLayout.c
+@@ -1929,14 +1929,6 @@ static int selectLatestIndexSaveLayout(SubIndexLayout   *sil,
+   return UDS_SUCCESS;
+ }
+ 
+-/*****************************************************************************/
+-static uint64_t getTimeMS(AbsTime time)
+-{
+-  time_t t = asTimeT(time);
+-  RelTime r = timeDifference(time, fromTimeT(t));
+-  return (uint64_t) t * 1000 + relTimeToMilliseconds(r);
+-}
+-
+ /*****************************************************************************/
+ __attribute__((warn_unused_result))
+ static int instantiateIndexSaveLayout(IndexSaveLayout *isl,
+@@ -1978,7 +1970,6 @@ static int instantiateIndexSaveLayout(IndexSaveLayout *isl,
+   isl->read = isl->written = false;
+   isl->saveType = saveType;
+   memset(&isl->saveData, 0, sizeof(isl->saveData));
+-  isl->saveData.timestamp = getTimeMS(currentTime(CLOCK_REALTIME));
+   isl->saveData.version   = 1;
+ 
+   isl->saveData.nonce = generateIndexSaveNonce(volumeNonce, isl);
+diff --git a/uds/indexSession.c b/uds/indexSession.c
+index c2c6b30..20ca111 100644
+--- a/uds/indexSession.c
++++ b/uds/indexSession.c
+@@ -33,7 +33,7 @@ static void collectStats(const struct uds_index_session *indexSession,
+ {
+   const SessionStats *sessionStats = &indexSession->stats;
+ 
+-  stats->currentTime = asTimeT(currentTime(CLOCK_REALTIME));
++  stats->currentTime = absTimeToSeconds(currentTime(CLOCK_REALTIME));
+ 
+   stats->postsFound         = READ_ONCE(sessionStats->postsFound);
+   stats->inMemoryPostsFound = READ_ONCE(sessionStats->postsFoundOpenChapter);
+diff --git a/uds/timeUtils.c b/uds/timeUtils.c
+index 6e7075f..8680aaf 100644
+--- a/uds/timeUtils.c
++++ b/uds/timeUtils.c
+@@ -19,6 +19,7 @@
+  * $Id: //eng/uds-releases/jasper/src/uds/timeUtils.c#4 $
+  */
+ 
++#include "permassert.h"
+ #include "stringUtils.h"
+ #include "timeUtils.h"
+ 
+diff --git a/uds/timeUtils.h b/uds/timeUtils.h
+index 5343fe7..1abe04b 100644
+--- a/uds/timeUtils.h
++++ b/uds/timeUtils.h
+@@ -108,6 +108,17 @@ RelTime timeDifference(AbsTime a, AbsTime b);
+ #endif
+ 
+ 
++/*
++ * Convert an AbsTime value to milliseconds
++ *
++ * @param abstime  The absolute time
++ *
++ * @return the equivalent number of millseconds since the epoch
++ */
++static INLINE int64_t absTimeToMilliseconds(AbsTime abstime)
++{
++  return abstime / NSEC_PER_MSEC;
++}
+ 
+ /**
+  * Convert seconds to a RelTime value
+@@ -216,13 +227,13 @@ static INLINE int64_t relTimeToNanoseconds(RelTime reltime)
+ uint64_t nowUsec(void) __attribute__((warn_unused_result));
+ 
+ /**
+- * Convert from an AbsTime to a time_t
++ * Convert from an AbsTime to seconds truncating
+  *
+  * @param time  an AbsTime time
+  *
+- * @return a time_t time
++ * @return a 64-bit signed number of seconds
+  **/
+-static INLINE time_t asTimeT(AbsTime time)
++static INLINE int64_t absTimeToSeconds(AbsTime time)
+ {
+ #ifdef __KERNEL__
+   return time / 1000000000;
+@@ -232,13 +243,13 @@ static INLINE time_t asTimeT(AbsTime time)
+ }
+ 
+ /**
+- * Convert from a time_t to an AbsTime,
++ * Convert from seconds to an AbsTime,
+  *
+- * @param time  a time_t time
++ * @param time  a 64-bit signed number of seconds
+  *
+  * @return an AbsTime time
+  **/
+-static INLINE AbsTime fromTimeT(time_t time)
++static INLINE AbsTime fromSeconds(int64_t time)
+ {
+ #ifdef __KERNEL__
+   return time * 1000000000;
+@@ -251,6 +262,18 @@ static INLINE AbsTime fromTimeT(time_t time)
+ }
+ 
+ #ifndef __KERNEL__
++/**
++ * Convert from an AbsTime to a time_t
++ *
++ * @param time  an AbsTime time
++ *
++ * @return a time_t time
++ **/
++static INLINE struct time_t asTimeT(AbsTime time)
++{
++  return time / NSEC_PER_SEC;
++}
++
+ /**
+  * Convert from an AbsTime to a struct timespec
+  *
+@@ -270,7 +293,7 @@ static INLINE struct timespec asTimeSpec(AbsTime time)
+  *
+  * @param time  an AbsTime time
+  *
+- * @return a time_t time
++ * @return a struct timeval time
+  **/
+ static INLINE struct timeval asTimeVal(AbsTime time)
+ {
+diff --git a/uds/uds.h b/uds/uds.h
+index d9f7757..09fd6f7 100644
+--- a/uds/uds.h
++++ b/uds/uds.h
+@@ -188,7 +188,7 @@ typedef struct udsIndexStats {
+  **/
+ typedef struct udsContextStats {
+   /** The time at which context statistics were last fetched */
+-  time_t   currentTime;
++  int64_t   currentTime;
+   /**
+    * The number of post calls since context statistics were last reset that
+    * found an existing entry
+-- 
+2.35.3
+

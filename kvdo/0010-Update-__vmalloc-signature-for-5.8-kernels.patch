@@ -1,0 +1,47 @@
+From c9400f5e4b37254800effb2cbc0d2d8de317fc7e Mon Sep 17 00:00:00 2001
+From: Sweet Tea Dorminy <sweettea@redhat.com>
+Date: Wed, 15 Jun 2022 22:24:23 -0400
+Subject: [PATCH 10/13] Update __vmalloc() signature for 5.8+ kernels.
+
+Pair: sclafani
+
+.../memoryLinuxKernel.c
+Updated to have __vmalloc() with two arguments for 5.8+ kernels.
+  For now, it is ifdef'd for 5.8+ kernels; we will remove the
+  ifdef at some point after the lab has been updated to have
+  no Fedora machines with an earlier kernel.
+---
+ uds/memoryLinuxKernel.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/uds/memoryLinuxKernel.c b/uds/memoryLinuxKernel.c
+index d441abd..35d766c 100644
+--- a/uds/memoryLinuxKernel.c
++++ b/uds/memoryLinuxKernel.c
+@@ -279,7 +279,11 @@ int allocateMemory(size_t size, size_t align, const char *what, void *ptr)
+        * retries will succeed.
+        */
+       for (;;) {
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0)
++        p = __vmalloc(size, gfpFlags | __GFP_NOWARN);
++#else
+         p = __vmalloc(size, gfpFlags | __GFP_NOWARN, PAGE_KERNEL);
++#endif
+         // Try again unless we succeeded or more than 1 second has elapsed.
+         if ((p != NULL) || (jiffies_to_msecs(jiffies - startTime) > 1000)) {
+           break;
+@@ -288,7 +292,11 @@ int allocateMemory(size_t size, size_t align, const char *what, void *ptr)
+       }
+       if (p == NULL) {
+         // Try one more time, logging a failure for this call.
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0)
++        p = __vmalloc(size, gfpFlags);
++#else
+         p = __vmalloc(size, gfpFlags, PAGE_KERNEL);
++#endif
+       }
+       if (p == NULL) {
+         FREE(block);
+-- 
+2.35.3
+

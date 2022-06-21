@@ -1,0 +1,33 @@
+From d3dbcdc9df7d933ff55fdfc55d99e3a0a6a31e2f Mon Sep 17 00:00:00 2001
+From: Andrew Walsh <awalsh@redhat.com>
+Date: Wed, 15 Jun 2022 20:40:51 -0400
+Subject: [PATCH 06/13] Added IMA statustype for 5.15+ kernels, emitting the
+ null string.
+
+This is not a permanent fix, but instead is an imitation of what is done in
+dm-thin in the meantime.
+---
+ vdo/kernel/dmvdo.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/vdo/kernel/dmvdo.c b/vdo/kernel/dmvdo.c
+index af74648..15454bb 100644
+--- a/vdo/kernel/dmvdo.c
++++ b/vdo/kernel/dmvdo.c
+@@ -200,6 +200,13 @@ static void vdoStatus(struct dm_target *ti,
+     // Report the string actually specified in the beginning.
+     DMEMIT("%s", ((DeviceConfig *) ti->private)->originalString);
+     break;
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,15,0)
++    // XXX We ought to print more detailed output here, but this iswhat thin
++    // does.
++  case STATUSTYPE_IMA:
++    *result = '\0';
++    break;
++#endif
+   }
+ 
+ //  spin_unlock_irqrestore(&layer->lock, flags);
+-- 
+2.35.3
+

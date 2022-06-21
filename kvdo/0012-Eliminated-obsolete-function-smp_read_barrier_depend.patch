@@ -1,0 +1,42 @@
+From b21e839b062ca797c025a7ebff44e3b4c9daba3d Mon Sep 17 00:00:00 2001
+From: John Wiele <jwiele@redhat.com>
+Date: Wed, 15 Jun 2022 22:28:26 -0400
+Subject: [PATCH 12/13] Eliminated obsolete function smp_read_barrier_depends.
+
+In Kernels newer than 5.9 or so, smp_read_barrier_depends has
+been removed because its functionality is provided by
+READ_ONCE.  See: https://lkml.org/lkml/2019/11/8/1021
+
+We provide a user space implementation that is empty for the
+four primary platforms we test on. That can be deleted. Some
+additional barriers can be added if we find that some platform
+requires them.
+
+Pair: sweeettea
+
+.../funnelQueue.c
+Replaced the call to smp_read_barrier_depends with a comment
+  noting that an additional barrier may be needed in the
+  future for some platforms such as Alpha.
+---
+ uds/util/funnelQueue.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/uds/util/funnelQueue.c b/uds/util/funnelQueue.c
+index 2c801dd..c50304d 100644
+--- a/uds/util/funnelQueue.c
++++ b/uds/util/funnelQueue.c
+@@ -74,7 +74,9 @@ static FunnelQueueEntry *getOldest(FunnelQueue *queue)
+     // without breaking the queue invariants.
+     oldest = next;
+     queue->oldest = oldest;
+-    smp_read_barrier_depends();
++    // XXX Some platforms such as Alpha may require an 
++    // additional barrier here.  See
++    // https://lkml.org/lkml/2019/11/8/1021
+     next = oldest->next;
+   }
+ 
+-- 
+2.35.3
+

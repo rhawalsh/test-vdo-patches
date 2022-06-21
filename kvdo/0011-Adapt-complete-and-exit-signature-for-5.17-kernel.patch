@@ -1,0 +1,37 @@
+From 703753fa7c78e1281d513d14dc1266458fc86169 Mon Sep 17 00:00:00 2001
+From: Michael Sclafani <sclafani@redhat.com>
+Date: Wed, 15 Jun 2022 22:24:53 -0400
+Subject: [PATCH 11/13] Adapt complete-and-exit signature for 5.17 kernel.
+
+---
+ uds/threadsLinuxKernel.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/uds/threadsLinuxKernel.c b/uds/threadsLinuxKernel.c
+index 526c06e..b7a7713 100644
+--- a/uds/threadsLinuxKernel.c
++++ b/uds/threadsLinuxKernel.c
+@@ -150,7 +150,19 @@ void exitThread(void)
+   }
+   mutex_unlock(&kernelThreadMutex);
+   unregisterAllocatingThread();
+-  complete_and_exit(completion, 1);
++
++/*
++ * Temporary workaround for LINUX_VERSION_CODE <= KERNEL_VERSION(5,17,0).
++ * We have two kernels, both claiming to be version 5.17.0, that have
++ * different APIs. The only way to distinguish the two is to check for
++ * the definition of a macro that was added as part of the change that
++ * implemented kthread_complete_and_exit.
++ */
++#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,17,0)
++        complete_and_exit(completion, 1); 
++#else
++        kthread_complete_and_exit(completion, 1); 
++#endif
+ }
+ 
+ /**********************************************************************/
+-- 
+2.35.3
+

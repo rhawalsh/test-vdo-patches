@@ -1,0 +1,24 @@
+From 441e0cdc5ed3ad078800e889025e009482d352c0 Mon Sep 17 00:00:00 2001
+From: Andrew Walsh <awalsh@redhat.com>
+Date: Wed, 15 Jun 2022 19:25:20 -0400
+Subject: [PATCH 01/13] Removed unneeded import of stddef.h
+
+---
+ uds/typeDefs.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/uds/typeDefs.h b/uds/typeDefs.h
+index 3369c31..b093e86 100644
+--- a/uds/typeDefs.h
++++ b/uds/typeDefs.h
+@@ -30,7 +30,6 @@
+ 
+ #include <linux/kernel.h>
+ #include <linux/types.h>
+-#include <stddef.h>
+ 
+ #define CHAR_BIT 8
+ 
+-- 
+2.35.3
+
