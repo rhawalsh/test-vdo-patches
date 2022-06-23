@@ -1,0 +1,30 @@
+From 319d7c718ae4251d1a75c42126cd8616d7715a26 Mon Sep 17 00:00:00 2001
+From: Bruce Johnston <bjohnsto@redhat.com>
+Date: Thu, 23 Jun 2022 14:30:41 +0000
+Subject: [PATCH] Use correct bi_bdev to do cloning with in 5.18.
+
+.../vio-read.c
+Use the user data bio's bi_bdev to do the cloning.  This matches what was being
+  done with __bio_clone_fast in older versions of the kernel.
+
+Signed-off-by: Andrew Walsh <awalsh@redhat.com>
+---
+ vdo/vio-read.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/vdo/vio-read.c b/vdo/vio-read.c
+index 9348c75d..3c914cd3 100644
+--- a/vdo/vio-read.c
++++ b/vdo/vio-read.c
+@@ -230,7 +230,7 @@ static void read_block(struct vdo_completion *completion)
+ 			__bio_clone_fast(vio->bio, data_vio->user_bio);
+ #else
+ 			bio_reset(vio->bio, vio->bio->bi_bdev, opf);
+-			bio_init_clone(vio->bio->bi_bdev,
++			bio_init_clone(data_vio->user_bio->bi_bdev,
+ 				       vio->bio,
+ 				       data_vio->user_bio,
+ 				       GFP_KERNEL);
+-- 
+2.36.1
+
