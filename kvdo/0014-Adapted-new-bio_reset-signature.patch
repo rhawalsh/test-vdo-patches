@@ -1,0 +1,31 @@
+From ac03b9c65a7f3f1be18d25bfc57f6b221637be74 Mon Sep 17 00:00:00 2001
+From: Andrew Walsh <awalsh@redhat.com>
+Date: Thu, 23 Jun 2022 02:24:15 +0000
+Subject: [PATCH 14/21] Adapted new bio_reset signature.
+
+Signed-off-by: Andrew Walsh <awalsh@redhat.com>
+---
+ vdo/kernel/bio.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/vdo/kernel/bio.c b/vdo/kernel/bio.c
+index 0ea74bf5..0caca063 100644
+--- a/vdo/kernel/bio.c
++++ b/vdo/kernel/bio.c
+@@ -224,7 +224,12 @@ static void initializeBio(BIO *bio, KernelLayer *layer)
+   // Save off important info so it can be set back later
+   unsigned short  vcnt = bio->bi_vcnt;
+   void           *pvt  = bio->bi_private;
+-  bio_reset(bio);     // Memsets large portion of bio. Reset all needed fields.
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,18,0)
++  bio_reset(bio);
++#else
++  bio_reset(bio, bio->bi_bdev, bio->bi_opf);
++#endif
+   bio->bi_private      = pvt;
+   bio->bi_vcnt         = vcnt;
+   bio->bi_end_io       = completeAsyncBio;
+-- 
+2.38.1
+

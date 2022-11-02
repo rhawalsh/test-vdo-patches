@@ -1,0 +1,29 @@
+From 97c28d578d019acc47058fe99f20f564d6ab6d8d Mon Sep 17 00:00:00 2001
+From: Andrew Walsh <awalsh@redhat.com>
+Date: Thu, 23 Jun 2022 02:24:34 +0000
+Subject: [PATCH 15/21] Adapted to new bio_alloc_bioset signature.
+
+Signed-off-by: Andrew Walsh <awalsh@redhat.com>
+---
+ vdo/kernel/bio.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/vdo/kernel/bio.c b/vdo/kernel/bio.c
+index 0caca063..9459dd57 100644
+--- a/vdo/kernel/bio.c
++++ b/vdo/kernel/bio.c
+@@ -247,7 +247,11 @@ void resetBio(BIO *bio, KernelLayer *layer)
+ /**********************************************************************/
+ int allocateBio(KernelLayer *layer, unsigned int bvecCount, BIO **bioPtr)
+ {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,18,0)
+   BIO *bio = bio_alloc_bioset(GFP_NOIO, bvecCount, layer->bioset);
++#else
++  BIO *bio = bio_alloc_bioset(getKernelLayerBdev(layer), bvecCount, 0, GFP_NOIO, layer->bioset);
++#endif
+   if (IS_ERR(bio)) {
+     logError("bio allocation failure %ld", PTR_ERR(bio));
+     return PTR_ERR(bio);
+-- 
+2.38.1
+

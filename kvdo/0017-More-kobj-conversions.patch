@@ -1,0 +1,183 @@
+From 6939578c9d07e54b8aafcd54515241a060057be5 Mon Sep 17 00:00:00 2001
+From: Andrew Walsh <awalsh@redhat.com>
+Date: Thu, 23 Jun 2022 03:11:15 +0000
+Subject: [PATCH 17/21] More kobj conversions.
+
+---
+ vdo/kernel/kvdoFlush.c      |  5 +++++
+ vdo/kernel/poolSysfs.c      | 14 ++++++++------
+ vdo/kernel/sysfs.c          |  5 +++--
+ vdo/kernel/udsIndex.c       |  5 +++--
+ vdo/kernel/workQueueSysfs.c | 14 ++++++++------
+ 5 files changed, 27 insertions(+), 16 deletions(-)
+
+diff --git a/vdo/kernel/kvdoFlush.c b/vdo/kernel/kvdoFlush.c
+index b6c24d96..d33725fb 100644
+--- a/vdo/kernel/kvdoFlush.c
++++ b/vdo/kernel/kvdoFlush.c
+@@ -273,7 +273,12 @@ int synchronousFlush(KernelLayer *layer)
+ {
+   BIO bio;
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,10,0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,18,0)
+   bio_init(&bio, 0, 0);
++#else
++  bio_init(&bio, getKernelLayerBdev(layer), 0, 0,
++           REQ_OP_WRITE | REQ_PREFLUSH);
++#endif
+ #else
+   bio_init(&bio);
+ #endif
+diff --git a/vdo/kernel/poolSysfs.c b/vdo/kernel/poolSysfs.c
+index 8eb2e23b..5f4b70fd 100644
+--- a/vdo/kernel/poolSysfs.c
++++ b/vdo/kernel/poolSysfs.c
+@@ -175,7 +175,7 @@ static PoolAttribute vdoPoolRequestsMaximumAttr = {
+   .show  = poolRequestsMaximumShow,
+ };
+ 
+-static struct attribute *poolAttrs[] = {
++static struct attribute *pool_attrs[] = {
+   &vdoPoolCompressingAttr.attr,
+   &vdoPoolDiscardsActiveAttr.attr,
+   &vdoPoolDiscardsLimitAttr.attr,
+@@ -186,11 +186,12 @@ static struct attribute *poolAttrs[] = {
+   &vdoPoolRequestsMaximumAttr.attr,
+   NULL,
+ };
++ATTRIBUTE_GROUPS(pool);
+ 
+ struct kobj_type kernelLayerKobjType = {
+-  .release       = vdoPoolRelease,
+-  .sysfs_ops     = &vdoPoolSysfsOps,
+-  .default_attrs = poolAttrs,
++  .release        = vdoPoolRelease,
++  .sysfs_ops      = &vdoPoolSysfsOps,
++  .default_groups = pool_groups,
+ };
+ 
+ /**********************************************************************/
+@@ -213,9 +214,10 @@ static void workQueueDirectoryRelease(struct kobject *kobj)
+ }
+ 
+ /**********************************************************************/
+-static struct attribute *noAttrs[] = {
++static struct attribute *no_attrs[] = {
+   NULL,
+ };
++ATTRIBUTE_GROUPS(no);
+ 
+ static struct sysfs_ops noSysfsOps = {
+   // These should never be reachable since there are no attributes.
+@@ -226,5 +228,5 @@ static struct sysfs_ops noSysfsOps = {
+ struct kobj_type workQueueDirectoryKobjType = {
+   .release       = workQueueDirectoryRelease,
+   .sysfs_ops     = &noSysfsOps,
+-  .default_attrs = noAttrs,
++  .default_groups = no_groups,
+ };
+diff --git a/vdo/kernel/sysfs.c b/vdo/kernel/sysfs.c
+index 04d04f57..f4812acb 100644
+--- a/vdo/kernel/sysfs.c
++++ b/vdo/kernel/sysfs.c
+@@ -295,7 +295,7 @@ static VDOAttribute vdoVersionAttr = {
+   .show  = vdoVersionShow,
+ };
+ 
+-static struct attribute *defaultAttrs[] = {
++static struct attribute *default_attrs[] = {
+   &vdoStatusAttr.attr,
+   &vdoLogLevelAttr.attr,
+   &vdoMaxReqActiveAttr.attr,
+@@ -305,6 +305,7 @@ static struct attribute *defaultAttrs[] = {
+   &vdoVersionAttr.attr,
+   NULL
+ };
++ATTRIBUTE_GROUPS(default);
+ 
+ static struct sysfs_ops vdoSysfsOps = {
+   .show  = vdoAttrShow,
+@@ -320,7 +321,7 @@ static void vdoRelease(struct kobject *kobj)
+ struct kobj_type vdo_ktype = {
+   .release   = vdoRelease,
+   .sysfs_ops = &vdoSysfsOps,
+-  .default_attrs = defaultAttrs,
++  .default_groups = default_groups,
+ };
+ 
+ /**********************************************************************/
+diff --git a/vdo/kernel/udsIndex.c b/vdo/kernel/udsIndex.c
+index 2c4c0eff..3425eec8 100644
+--- a/vdo/kernel/udsIndex.c
++++ b/vdo/kernel/udsIndex.c
+@@ -729,15 +729,16 @@ static UDSAttribute dedupeStatusAttribute = {
+   .showString = getUDSStateName,
+ };
+ 
+-static struct attribute *dedupeAttributes[] = {
++static struct attribute *dedupe_attrs[] = {
+   &dedupeStatusAttribute.attr,
+   NULL,
+ };
++ATTRIBUTE_GROUPS(dedupe);
+ 
+ static struct kobj_type dedupeKobjType = {
+   .release       = dedupeKobjRelease,
+   .sysfs_ops     = &dedupeSysfsOps,
+-  .default_attrs = dedupeAttributes,
++  .default_groups = dedupe_groups,
+ };
+ 
+ /*****************************************************************************/
+diff --git a/vdo/kernel/workQueueSysfs.c b/vdo/kernel/workQueueSysfs.c
+index bc989c7e..c7f839fe 100644
+--- a/vdo/kernel/workQueueSysfs.c
++++ b/vdo/kernel/workQueueSysfs.c
+@@ -99,7 +99,7 @@ static WorkQueueAttribute workFunctionsAttr = {
+ };
+ 
+ /**********************************************************************/
+-static struct attribute *simpleWorkQueueAttrs[] = {
++static struct attribute *simpleWorkQueue_attrs[] = {
+   &nameAttr.attr,
+   &pidAttr.attr,
+   &timesAttr.attr,
+@@ -107,13 +107,15 @@ static struct attribute *simpleWorkQueueAttrs[] = {
+   &workFunctionsAttr.attr,
+   NULL,
+ };
++ATTRIBUTE_GROUPS(simpleWorkQueue);
+ 
+ /**********************************************************************/
+-static struct attribute *roundRobinWorkQueueAttrs[] = {
++static struct attribute *roundRobinWorkQueue_attrs[] = {
+   &nameAttr.attr,
+   &typeAttr.attr,
+   NULL,
+ };
++ATTRIBUTE_GROUPS(roundRobinWorkQueue);
+ 
+ /**********************************************************************/
+ static ssize_t workQueueAttrShow(struct kobject   *kobj,
+@@ -162,14 +164,14 @@ static void workQueueRelease(struct kobject *kobj)
+ 
+ /**********************************************************************/
+ struct kobj_type simpleWorkQueueKobjType = {
+-  .default_attrs = simpleWorkQueueAttrs,
+-  .release       = workQueueRelease,
+-  .sysfs_ops     = &workQueueSysfsOps,
++  .default_groups = simpleWorkQueue_groups,
++  .release        = workQueueRelease,
++  .sysfs_ops      = &workQueueSysfsOps,
+ };
+ 
+ /**********************************************************************/
+ struct kobj_type roundRobinWorkQueueKobjType = {
+-  .default_attrs = roundRobinWorkQueueAttrs,
++  .default_groups = roundRobinWorkQueue_groups,
+   .release       = workQueueRelease,
+   .sysfs_ops     = &workQueueSysfsOps,
+ };
+-- 
+2.38.1
+

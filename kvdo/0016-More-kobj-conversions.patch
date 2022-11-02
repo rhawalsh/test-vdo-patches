@@ -1,0 +1,105 @@
+From 166d4fb79ab91c00a43f1917d00afb9e55404ee2 Mon Sep 17 00:00:00 2001
+From: Andrew Walsh <awalsh@redhat.com>
+Date: Thu, 23 Jun 2022 02:48:55 +0000
+Subject: [PATCH 16/21] More kobj conversions.
+
+---
+ vdo/kernel/histogram.c      | 10 ++++++----
+ vdo/kernel/kernelLayer.c    |  7 ++++---
+ vdo/kernel/poolSysfs.h      |  2 +-
+ vdo/kernel/poolSysfsStats.c |  2 +-
+ 4 files changed, 12 insertions(+), 9 deletions(-)
+
+diff --git a/vdo/kernel/histogram.c b/vdo/kernel/histogram.c
+index 31c0b5cf..3bcf5341 100644
+--- a/vdo/kernel/histogram.c
++++ b/vdo/kernel/histogram.c
+@@ -423,7 +423,7 @@ static HistogramAttribute unitAttribute = {
+ };
+ 
+ // "Real" histogram plotting.
+-static struct attribute *histogramAttributes[] = {
++static struct attribute *histogram_attrs[] = {
+   &countAttribute.attr,
+   &histogramAttribute.attr,
+   &labelAttribute.attr,
+@@ -435,14 +435,15 @@ static struct attribute *histogramAttributes[] = {
+   &unitAttribute.attr,
+   NULL,
+ };
++ATTRIBUTE_GROUPS(histogram);
+ 
+ static struct kobj_type histogramKobjType = {
+   .release       = histogramKobjRelease,
+   .sysfs_ops     = &histogramSysfsOps,
+-  .default_attrs = histogramAttributes,
++  .default_groups = histogram_groups,
+ };
+ 
+-static struct attribute *bucketlessHistogramAttributes[] = {
++static struct attribute *bucketlessHistogram_attrs[] = {
+   &countAttribute.attr,
+   &labelAttribute.attr,
+   &maximumAttribute.attr,
+@@ -451,11 +452,12 @@ static struct attribute *bucketlessHistogramAttributes[] = {
+   &unitAttribute.attr,
+   NULL,
+ };
++ATTRIBUTE_GROUPS(bucketlessHistogram);
+ 
+ static struct kobj_type bucketlessHistogramKobjType = {
+   .release       = histogramKobjRelease,
+   .sysfs_ops     = &histogramSysfsOps,
+-  .default_attrs = bucketlessHistogramAttributes,
++  .default_groups = bucketlessHistogram_groups,
+ };
+ 
+ /***********************************************************************/
+diff --git a/vdo/kernel/kernelLayer.c b/vdo/kernel/kernelLayer.c
+index e581e78a..be71cdb7 100644
+--- a/vdo/kernel/kernelLayer.c
++++ b/vdo/kernel/kernelLayer.c
+@@ -1216,11 +1216,12 @@ int startKernelLayer(KernelLayer *layer, char **reason)
+     return result;
+   }
+ 
++  ATTRIBUTE_GROUPS(poolStats);
+   setKernelLayerState(layer, LAYER_RUNNING);
+   static struct kobj_type statsDirectoryKobjType = {
+-    .release       = poolStatsRelease,
+-    .sysfs_ops     = &poolStatsSysfsOps,
+-    .default_attrs = poolStatsAttrs,
++    .release        = poolStatsRelease,
++    .sysfs_ops      = &poolStatsSysfsOps,
++    .default_groups = poolStats_groups,
+   };
+   kobject_init(&layer->statsDirectory, &statsDirectoryKobjType);
+   result = kobject_add(&layer->statsDirectory, &layer->kobj, "statistics");
+diff --git a/vdo/kernel/poolSysfs.h b/vdo/kernel/poolSysfs.h
+index e4156b30..d750a8e4 100644
+--- a/vdo/kernel/poolSysfs.h
++++ b/vdo/kernel/poolSysfs.h
+@@ -32,6 +32,6 @@ extern struct kobj_type workQueueDirectoryKobjType;
+ // The sysfs_ops used for the "statistics" subdirectory.
+ extern struct sysfs_ops poolStatsSysfsOps;
+ // The attribute used for the "statistics" subdirectory.
+-extern struct attribute *poolStatsAttrs[];
++extern struct attribute *poolStats_attrs[];
+ 
+ #endif /* POOL_SYSFS_H */
+diff --git a/vdo/kernel/poolSysfsStats.c b/vdo/kernel/poolSysfsStats.c
+index 6ef89334..49251c2a 100644
+--- a/vdo/kernel/poolSysfsStats.c
++++ b/vdo/kernel/poolSysfsStats.c
+@@ -2480,7 +2480,7 @@ static PoolStatsAttribute poolStatsIndexMaxDedupeQueriesAttr = {
+   .show  = poolStatsIndexMaxDedupeQueriesShow,
+ };
+ 
+-struct attribute *poolStatsAttrs[] = {
++struct attribute *poolStats_attrs[] = {
+   &poolStatsDataBlocksUsedAttr.attr,
+   &poolStatsOverheadBlocksUsedAttr.attr,
+   &poolStatsLogicalBlocksUsedAttr.attr,
+-- 
+2.38.1
+

@@ -1,10 +1,10 @@
 %define spec_release 3
 
-%global commit 65e143ba5f9f790b95877dd9b4f34ac20b0b53d5
+%global commit 72f94c2d858e4baabeba72bc3551287a2dd45d87
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 
 %define kmod_name		kvdo
-%define kmod_driver_version	6.2.7.9
+%define kmod_driver_version	6.2.7.17
 %define kmod_rpm_release	%{spec_release}
 %define kmod_kernel_version	3.10.0-693.el7
 
@@ -35,6 +35,14 @@ Patch0010: 0010-Update-__vmalloc-signature-for-5.8-kernels.patch
 Patch0011: 0011-Adapt-complete-and-exit-signature-for-5.17-kernel.patch
 Patch0012: 0012-Eliminated-obsolete-function-smp_read_barrier_depend.patch
 Patch0013: 0013-Removed-export-of-currentTime.patch
+Patch0014: 0014-Adapted-new-bio_reset-signature.patch
+Patch0015: 0015-Adapted-to-new-bio_alloc_bioset-signature.patch
+Patch0016: 0016-More-kobj-conversions.patch
+Patch0017: 0017-More-kobj-conversions.patch
+Patch0018: 0018-Stop-importing-stddef.h-as-of-5.19.patch
+Patch0019: 0019-Adapted-to-dm-bufio-API-change.patch
+Patch0020: 0020-Replace-prandom_bytes-with-get_random_bytes.patch
+Patch0021: 0021-Switched-from-bdevname-to-the-magic-pg-prink-format.patch
 
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Requires:       dkms
@@ -98,6 +106,14 @@ done
 %patch0011 -p1
 %patch0012 -p1
 %patch0013 -p1
+%patch0014 -p1
+%patch0015 -p1
+%patch0016 -p1
+%patch0017 -p1
+%patch0018 -p1
+%patch0019 -p1
+%patch0020 -p1
+%patch0021 -p1
 
 %build
 # Nothing doing here, as we're going to build on whatever kernel we end up
@@ -130,6 +146,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_usr}/src/%{kmod_name}-%{version}
 
 %changelog
+* Tue Nov 01 2022 - Andy Walsh <awalsh@redhat.com> - 6.2.7.17-3
+- Applied patches to enable builds up to 6.1 kernel.
+
 * Tue Jun 21 2022 - Andy Walsh <awalsh@redhat.com> - 6.2.7.9-3
 - Re-pointed source to upstream repo
 - Applied patches to enable builds up to 5.17 kernel

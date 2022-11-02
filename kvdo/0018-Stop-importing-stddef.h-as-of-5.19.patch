@@ -1,0 +1,28 @@
+From de15c8adfdf9c6d815ca83034756db1985c23715 Mon Sep 17 00:00:00 2001
+From: Andy Walsh <awalsh@redhat.com>
+Date: Thu, 27 Oct 2022 12:46:59 -0400
+Subject: [PATCH 18/21] Stop importing stddef.h as of 5.19
+
+Signed-off-by: Andy Walsh <awalsh@redhat.com>
+---
+ uds/typeDefs.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/uds/typeDefs.h b/uds/typeDefs.h
+index 3369c313..777fd1bf 100644
+--- a/uds/typeDefs.h
++++ b/uds/typeDefs.h
+@@ -30,7 +30,10 @@
+ 
+ #include <linux/kernel.h>
+ #include <linux/types.h>
++#include <linux/version.h>
++#if LINUX_VERSION_CODE <= KERNEL_VERSION(5,19,0)
+ #include <stddef.h>
++#endif
+ 
+ #define CHAR_BIT 8
+ 
+-- 
+2.38.1
+

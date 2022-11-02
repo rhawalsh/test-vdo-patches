@@ -1,0 +1,57 @@
+From 872660655ece5aa023bb848109c9f243dbf7c629 Mon Sep 17 00:00:00 2001
+From: Michael Sclafani <sclafani@redhat.com>
+Date: Thu, 27 Oct 2022 22:08:24 -0400
+Subject: [PATCH 19/21] Adapted to dm-bufio API change
+
+There's a change to the dm-bufio API in the latest kernel
+snapshot, adding an argument to dm_bufio_client_create(). As with
+any kernel snapshot change, there's no valid kernel version to
+conditionalize on, but fortunately the same patch series also
+defines a new macro symbol, DM_BUFIO_CLIENT_NO_SLEEP.
+(See https://www.spinics.net/lists/dm-devel/msg51515.html)
+
+Pair: msakai
+
+.../io-factory.c
+Passed "0" as the new flags argument to dm_bufio_client_create()
+  when DM_BUFIO_CLIENT_NO_SLEEP is defined.
+---
+ uds/ioFactoryLinuxKernel.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/uds/ioFactoryLinuxKernel.c b/uds/ioFactoryLinuxKernel.c
+index 0696eabc..0d16dac3 100644
+--- a/uds/ioFactoryLinuxKernel.c
++++ b/uds/ioFactoryLinuxKernel.c
+@@ -21,6 +21,7 @@
+ 
+ #include <linux/blkdev.h>
+ #include <linux/mount.h>
++#include <linux/version.h>
+ 
+ #include "atomicDefs.h"
+ #include "ioFactory.h"
+@@ -106,10 +107,20 @@ int makeBufio(IOFactory               *factory,
+                                    blockSize, UDS_BLOCK_SIZE);
+   }
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0)
+   struct dm_bufio_client *client = dm_bufio_client_create(factory->bdev,
+                                                           blockSize,
+                                                           reservedBuffers, 0,
+                                                           NULL, NULL);
++#else
++  struct dm_bufio_client *client = dm_bufio_client_create(factory->bdev,
++                                                          blockSize,
++                                                          reservedBuffers,
++							  0,
++                                                          NULL,
++							  NULL,
++							  0);
++#endif
+   if (IS_ERR(client)) {
+     return -PTR_ERR(client);
+   }
+-- 
+2.38.1
+

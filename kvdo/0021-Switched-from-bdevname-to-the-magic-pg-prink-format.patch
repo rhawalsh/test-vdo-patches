@@ -1,0 +1,40 @@
+From 781802311836cf95fa8a09c0da1ba6cf8bc038cc Mon Sep 17 00:00:00 2001
+From: Michael Sclafani <sclafani@redhat.com>
+Date: Thu, 27 Oct 2022 22:12:52 -0400
+Subject: [PATCH 21/21] Switched from bdevname() to the magic %pg prink format.
+
+bdevname() has been removed in the latest snapshot. See
+https://www.spinics.net/lists/raid/msg70941.html
+
+.../dmvdo.c
+Switched from bdevname() to the magic %pg printk format.
+---
+ vdo/kernel/dmvdo.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/vdo/kernel/dmvdo.c b/vdo/kernel/dmvdo.c
+index 3f0d29c1..fe06ee34 100644
+--- a/vdo/kernel/dmvdo.c
++++ b/vdo/kernel/dmvdo.c
+@@ -174,7 +174,6 @@ static void vdoStatus(struct dm_target *ti,
+                       unsigned int      maxlen)
+ {
+   KernelLayer *layer = getKernelLayerForTarget(ti);
+-  char nameBuffer[BDEVNAME_SIZE];
+   // N.B.: The DMEMIT macro uses the variables named "sz", "result", "maxlen".
+   int sz = 0;
+ 
+@@ -184,8 +183,8 @@ static void vdoStatus(struct dm_target *ti,
+     mutex_lock(&layer->statsMutex);
+     getKVDOStatistics(&layer->kvdo, &layer->vdoStatsStorage);
+     VDOStatistics *stats = &layer->vdoStatsStorage;
+-    DMEMIT("/dev/%s %s %s %s %s %llu %llu",
+-           bdevname(getKernelLayerBdev(layer), nameBuffer),
++    DMEMIT("/dev/%pg %s %s %s %s %llu %llu",
++           getKernelLayerBdev(layer),
+ 	   stats->mode,
+ 	   stats->inRecoveryMode ? "recovering" : "-",
+ 	   getDedupeStateName(layer->dedupeIndex),
+-- 
+2.38.1
+
