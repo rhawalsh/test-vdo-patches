@@ -39,10 +39,9 @@ Patch0014: 0014-Adapted-new-bio_reset-signature.patch
 Patch0015: 0015-Adapted-to-new-bio_alloc_bioset-signature.patch
 Patch0016: 0016-More-kobj-conversions.patch
 Patch0017: 0017-More-kobj-conversions.patch
-Patch0018: 0018-Stop-importing-stddef.h-as-of-5.19.patch
-Patch0019: 0019-Adapted-to-dm-bufio-API-change.patch
-Patch0020: 0020-Replace-prandom_bytes-with-get_random_bytes.patch
-Patch0021: 0021-Switched-from-bdevname-to-the-magic-pg-prink-format.patch
+Patch0018: 0018-Adapted-to-dm-bufio-API-change.patch
+Patch0019: 0019-Replace-prandom_bytes-with-get_random_bytes.patch
+Patch0020: 0020-Switched-from-bdevname-to-the-magic-pg-prink-format.patch
 
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Requires:       dkms
@@ -113,7 +112,6 @@ done
 %patch0018 -p1
 %patch0019 -p1
 %patch0020 -p1
-%patch0021 -p1
 
 %build
 # Nothing doing here, as we're going to build on whatever kernel we end up

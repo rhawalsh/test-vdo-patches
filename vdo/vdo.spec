@@ -1,13 +1,13 @@
 %define spec_release 3
 
-%global commit 055c57957ca5493b94e32b2c4894ea2a5e28000d
+%global commit c1289db707c926439dbdd661476d608b10d2ec9b
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 #
 #
 #
 Summary: Management tools for Virtual Data Optimizer
 Name: vdo
-Version: 6.2.7.9
+Version: 6.2.7.17
 Release: %{spec_release}%{?dist}
 License: GPLv2
 
@@ -192,6 +192,9 @@ This package provides the user-space support tools for VDO.
 %{_mandir}/man8/vdoregenerategeometry.8.gz
 
 %changelog
+* Tue Nov 01 2022 - Andy Walsh <awalsh@redhat.com> - 6.2.7.17-3
+- Updated to new release.
+
 * Tue Jun 21 2022 - Andy Walsh <awalsh@redhat.com> - 6.2.7.9-3
 - Re-pointed source to upstream repo
 - Applied patches to enable builds up to 5.17 kernel
