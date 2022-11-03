@@ -1,0 +1,57 @@
+From ca2a022960aa869b5542f02caf1d820427add9b6 Mon Sep 17 00:00:00 2001
+From: Andy Walsh <awalsh@redhat.com>
+Date: Thu, 3 Nov 2022 17:34:50 -0400
+Subject: [PATCH] Convert uds sysfs kobj calls.
+
+Signed-off-by: Andy Walsh <awalsh@redhat.com>
+---
+ uds/sysfs.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/uds/sysfs.c b/uds/sysfs.c
+index 916c8b1..80a6f85 100644
+--- a/uds/sysfs.c
++++ b/uds/sysfs.c
+@@ -86,14 +86,15 @@ static struct sysfs_ops emptyOps = {
+   .store = emptyStore,
+ };
+ 
+-static struct attribute *emptyAttrs[] = {
++static struct attribute *empty_attrs[] = {
+   NULL,
+ };
++ATTRIBUTE_GROUPS(empty);
+ 
+ static struct kobj_type emptyObjectType = {
+   .release       = emptyRelease,
+   .sysfs_ops     = &emptyOps,
+-  .default_attrs = emptyAttrs,
++  .default_groups = empty_groups,
+ };
+ 
+ 
+@@ -166,10 +167,11 @@ static ParameterAttribute logLevelAttr = {
+   .storeString = parameterStoreLogLevel,
+ };
+ 
+-static struct attribute *parameterAttrs[] = {
++static struct attribute *parameter_attrs[] = {
+   &logLevelAttr.attr,
+   NULL,
+ };
++ATTRIBUTE_GROUPS(parameter);
+ 
+ static struct sysfs_ops parameterOps = {
+   .show  = parameterShow,
+@@ -179,7 +181,7 @@ static struct sysfs_ops parameterOps = {
+ static struct kobj_type parameterObjectType = {
+   .release       = emptyRelease,
+   .sysfs_ops     = &parameterOps,
+-  .default_attrs = parameterAttrs,
++  .default_groups = parameter_groups,
+ };
+ 
+ /**********************************************************************/
+-- 
+2.38.1
+

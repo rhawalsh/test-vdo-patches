@@ -1,4 +1,4 @@
-%define spec_release 3
+%define spec_release 4
 
 %global commit 72f94c2d858e4baabeba72bc3551287a2dd45d87
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
@@ -42,6 +42,7 @@ Patch0017: 0017-More-kobj-conversions.patch
 Patch0018: 0018-Adapted-to-dm-bufio-API-change.patch
 Patch0019: 0019-Replace-prandom_bytes-with-get_random_bytes.patch
 Patch0020: 0020-Switched-from-bdevname-to-the-magic-pg-prink-format.patch
+Patch0021: 0021-Convert-uds-sysfs-kobj-calls.patch
 
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 Requires:       dkms
@@ -112,6 +113,7 @@ done
 %patch0018 -p1
 %patch0019 -p1
 %patch0020 -p1
+%patch0021 -p1
 
 %build
 # Nothing doing here, as we're going to build on whatever kernel we end up
@@ -144,6 +146,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_usr}/src/%{kmod_name}-%{version}
 
 %changelog
+* Thu Nov 03 2022 - Andy Walsh <awalsh@redhat.com> - 6.2.7.17-4
+- Added missing uds kobj patch.
+
 * Tue Nov 01 2022 - Andy Walsh <awalsh@redhat.com> - 6.2.7.17-3
 - Applied patches to enable builds up to 6.1 kernel.
 
