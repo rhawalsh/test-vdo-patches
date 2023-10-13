@@ -1,0 +1,90 @@
+From fe612fa3e1707053df3ba434ddffd2ec47b4d3d6 Mon Sep 17 00:00:00 2001
+From: Andrew Walsh <awalsh@redhat.com>
+Date: Fri, 13 Oct 2023 16:59:46 +0000
+Subject: [PATCH] Updated io-factory calls through blkdev for 6.5 kernel.
+
+Added support to pass a value for the new blk_holder_ops argument that
+is used by blkdev_get_by_dev() and blkdev_get_by_path(). This was
+originally introduced in the linux kernel via commit
+0718afd47f70cf46877c39c25d06b786e1a3f36c.
+
+Also adapted the argument preferneces for blkdev_put() that uses the
+holder as an indication for exclusive opens.  This was originally
+introduced in the linux kernel via commit
+2736e8eeb0ccdc71d1f4256c9c9a28f58cc43307.
+
+Signed-off-by: Andrew Walsh <awalsh@redhat.com>
+---
+ uds/ioFactoryLinuxKernel.c | 37 +++++++++++++++++++++++++++++++++++--
+ 1 file changed, 35 insertions(+), 2 deletions(-)
+
+diff --git a/uds/ioFactoryLinuxKernel.c b/uds/ioFactoryLinuxKernel.c
+index 0d16dac..ce06222 100644
+--- a/uds/ioFactoryLinuxKernel.c
++++ b/uds/ioFactoryLinuxKernel.c
+@@ -49,11 +49,36 @@ void getIOFactory(IOFactory *factory)
+ int makeIOFactory(const char *path, IOFactory **factoryPtr)
+ {
+   struct block_device *bdev;
+-  dev_t device = name_to_dev_t(path);
+-  if (device != 0) {
++
++  dev_t device;
++  unsigned int major, minor;
++  char dummy;
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,5,0)
++  const struct blk_holder_ops hops = { NULL };
++#endif
++
++  if (sscanf(path, "%u:%u%c", &major, &minor, &dummy) == 2) {
++    device = MKDEV(major, minor);
++    if (MAJOR(device) != major || MINOR(device) != minor) {
++      bdev = NULL;
++      logErrorWithStringError(UDS_INVALID_ARGUMENT,
++                              "%s is not a valid block device",
++                              path);
++      return UDS_INVALID_ARGUMENT;
++
++    }
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0)
+     bdev = blkdev_get_by_dev(device, BLK_FMODE, NULL);
++#else
++    bdev = blkdev_get_by_dev(device, BLK_FMODE, NULL, &hops);
++#endif
+   } else {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0)
+     bdev = blkdev_get_by_path(path, BLK_FMODE, NULL);
++#else
++    bdev = blkdev_get_by_path(path, BLK_FMODE, NULL, NULL);
++#endif
+   }
+   if (IS_ERR(bdev)) {
+     logErrorWithStringError(-PTR_ERR(bdev), "%s is not a block device", path);
+@@ -63,7 +88,11 @@ int makeIOFactory(const char *path, IOFactory **factoryPtr)
+   IOFactory *factory;
+   int result = ALLOCATE(1, IOFactory, __func__, &factory);
+   if (result != UDS_SUCCESS) {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0)
+     blkdev_put(bdev, BLK_FMODE);
++#else
++    blkdev_put(bdev, NULL);
++#endif
+     return result;
+   }
+ 
+@@ -78,7 +107,11 @@ int makeIOFactory(const char *path, IOFactory **factoryPtr)
+ void putIOFactory(IOFactory *factory)
+ {
+   if (atomic_add_return(-1, &factory->refCount) <= 0) {
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,5,0)
+     blkdev_put(factory->bdev, BLK_FMODE);
++#else
++    blkdev_put(factory->bdev, NULL);
++#endif
+     FREE(factory);
+   }
+ }
+-- 
+2.41.0
+
