@@ -93,27 +93,27 @@ done
 
 %prep
 %setup -n %{kmod_name}-%{commit}
-%patch0001 -p1
-%patch0002 -p1
-%patch0003 -p1
-%patch0004 -p1
-%patch0005 -p1
-%patch0006 -p1
-%patch0007 -p1
-%patch0008 -p1
-%patch0009 -p1
-%patch0010 -p1
-%patch0011 -p1
-%patch0012 -p1
-%patch0013 -p1
-%patch0014 -p1
-%patch0015 -p1
-%patch0016 -p1
-%patch0017 -p1
-%patch0018 -p1
-%patch0019 -p1
-%patch0020 -p1
-%patch0021 -p1
+%patch 0001 -p1
+%patch 0002 -p1
+%patch 0003 -p1
+%patch 0004 -p1
+%patch 0005 -p1
+%patch 0006 -p1
+%patch 0007 -p1
+%patch 0008 -p1
+%patch 0009 -p1
+%patch 0010 -p1
+%patch 0011 -p1
+%patch 0012 -p1
+%patch 0013 -p1
+%patch 0014 -p1
+%patch 0015 -p1
+%patch 0016 -p1
+%patch 0017 -p1
+%patch 0018 -p1
+%patch 0019 -p1
+%patch 0020 -p1
+%patch 0021 -p1
 
 %build
 # Nothing doing here, as we're going to build on whatever kernel we end up
