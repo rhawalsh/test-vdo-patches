@@ -1,4 +1,4 @@
-%define spec_release 3
+%define spec_release 4
 
 %global commit c1289db707c926439dbdd661476d608b10d2ec9b
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
@@ -192,6 +192,9 @@ This package provides the user-space support tools for VDO.
 %{_mandir}/man8/vdoregenerategeometry.8.gz
 
 %changelog
+* Sun Dec 03 2023 - Andy Walsh <awalsh@redhat.com> - 6.2.7.17-4
+- Bumped Release for rebuild on Fedora 39 for python binary update
+
 * Tue Nov 01 2022 - Andy Walsh <awalsh@redhat.com> - 6.2.7.17-3
 - Updated to new release.
 
